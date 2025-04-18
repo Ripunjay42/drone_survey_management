@@ -1,0 +1,149 @@
+// server/controllers/missionController.js
+const Mission = require('../models/missionModel');
+const User = require('../models/userModel');
+
+// @desc    Create a new mission
+// @route   POST /api/missions
+// @access  Private
+const createMission = async (req, res) => {
+  try {
+    const {
+      name,
+      description,
+      surveyArea,
+      flightParameters,
+      schedule
+    } = req.body;
+
+    // Add the current user to the mission
+    const mission = await Mission.create({
+      name,
+      description,
+      user: req.user.id,
+      surveyArea,
+      flightParameters,
+      schedule
+    });
+
+    res.status(201).json(mission);
+  } catch (error) {
+    console.error('Error creating mission:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Get all missions for current user
+// @route   GET /api/missions
+// @access  Private
+const getMissions = async (req, res) => {
+  try {
+    // Find missions belonging to the current user
+    // Admins can see all missions, others see only their own
+    const filter = req.user.role === 'admin' ? {} : { user: req.user.id };
+    
+    const missions = await Mission.find(filter)
+      .sort({ createdAt: -1 })
+      .populate('user', 'name email');
+
+    res.status(200).json(missions);
+  } catch (error) {
+    console.error('Error fetching missions:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Get a single mission by ID
+// @route   GET /api/missions/:id
+// @access  Private
+const getMissionById = async (req, res) => {
+  try {
+    const mission = await Mission.findById(req.params.id)
+      .populate('user', 'name email');
+
+    if (!mission) {
+      return res.status(404).json({ message: 'Mission not found' });
+    }
+
+    // Check if user has permission to view this mission
+    if (mission.user._id.toString() !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Not authorized to access this mission' });
+    }
+
+    res.status(200).json(mission);
+  } catch (error) {
+    console.error('Error fetching mission:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Update a mission
+// @route   PUT /api/missions/:id
+// @access  Private
+const updateMission = async (req, res) => {
+  try {
+    const mission = await Mission.findById(req.params.id);
+
+    if (!mission) {
+      return res.status(404).json({ message: 'Mission not found' });
+    }
+
+    // Check if user has permission to update this mission
+    if (mission.user.toString() !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Not authorized to update this mission' });
+    }
+
+    // Cannot update missions that are already in progress or completed
+    if (['in-progress', 'completed'].includes(mission.status)) {
+      return res.status(400).json({ message: `Cannot update mission with status: ${mission.status}` });
+    }
+
+    const updatedMission = await Mission.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true, runValidators: true }
+    );
+
+    res.status(200).json(updatedMission);
+  } catch (error) {
+    console.error('Error updating mission:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Delete a mission
+// @route   DELETE /api/missions/:id
+// @access  Private
+const deleteMission = async (req, res) => {
+  try {
+    const mission = await Mission.findById(req.params.id);
+
+    if (!mission) {
+      return res.status(404).json({ message: 'Mission not found' });
+    }
+
+    // Check if user has permission to delete this mission
+    if (mission.user.toString() !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Not authorized to delete this mission' });
+    }
+
+    // Cannot delete missions that are already in progress
+    if (mission.status === 'in-progress') {
+      return res.status(400).json({ message: 'Cannot delete a mission that is in progress' });
+    }
+
+    await mission.deleteOne();
+
+    res.status(200).json({ id: req.params.id, message: 'Mission removed' });
+  } catch (error) {
+    console.error('Error deleting mission:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+module.exports = {
+  createMission,
+  getMissions,
+  getMissionById,
+  updateMission,
+  deleteMission
+};

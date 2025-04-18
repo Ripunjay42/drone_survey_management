@@ -1,37 +1,49 @@
 // client/src/components/auth/Login.jsx
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import useAuthStore from '../../stores/authStore';
 import { login } from '../../services/authService';
 
 const Login = () => {
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-  });
-  const { email, password } = formData;
-  
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
   const navigate = useNavigate();
-  const { setUser, setLoading, isLoading, error, clearError, setError } = useAuthStore();
+  const location = useLocation();
+  const { setUser } = useAuthStore();
 
-  const onChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-    if (error) clearError();
-  };
+  // Check if we were redirected from another page
+  const from = location.state?.from?.pathname || '/dashboard';
 
-  const onSubmit = async (e) => {
+  useEffect(() => {
+    // Check if already logged in
+    const user = localStorage.getItem('user');
+    if (user) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [navigate]);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsLoading(true);
+    setError('');
     
     try {
-      setLoading(true);
-      const userData = await login({ email, password });
-      setUser(userData);
-      navigate('/dashboard');
-    } catch (error) {
-      setError(error.message);
-      console.error('Login failed', error);
+      // Attempt login with email and password, not the entire form data object
+      const response = await login({email, password});
+      
+      // Store user in localStorage and Zustand state
+      localStorage.setItem('user', JSON.stringify(response));
+      setUser(response);
+      
+      // Navigate to the page user was trying to access, or dashboard by default
+      navigate(from, { replace: true });
+    } catch (err) {
+      console.error('Login error:', err);
+      setError(err.message || 'Failed to login. Please check your credentials.');
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -65,7 +77,7 @@ const Login = () => {
             </div>
           )}
           
-          <form className="space-y-6" onSubmit={onSubmit}>
+          <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">
                 Email address
@@ -79,7 +91,7 @@ const Login = () => {
                   className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                   placeholder="Enter your email"
                   value={email}
-                  onChange={onChange}
+                  onChange={(e) => setEmail(e.target.value)}
                 />
               </div>
             </div>
@@ -104,7 +116,7 @@ const Login = () => {
                   className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                   placeholder="Enter your password"
                   value={password}
-                  onChange={onChange}
+                  onChange={(e) => setPassword(e.target.value)}
                 />
               </div>
             </div>
