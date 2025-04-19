@@ -16,6 +16,10 @@ import Dashboard from './components/dashboard/Dashboard';
 import MissionsList from './components/missions/MissionsList';
 import MissionPlanningForm from './components/missions/MissionPlanningForm';
 
+// Drone Management Components
+import DronesList from './components/drones/DronesList';
+import DroneManagementForm from './components/drones/DroneManagementForm';
+
 function App() {
   return (
     <Router>
@@ -32,9 +36,16 @@ function App() {
             {/* Mission Routes */}
             <Route path="/missions" element={<MissionsList />} />
             <Route path="/missions/new" element={<MissionPlanningForm />} />
+            <Route path="/missions/:id" element={<div className="p-8">View Mission (Coming Soon)</div>} />
+            <Route path="/missions/:id/edit" element={<div className="p-8">Edit Mission (Coming Soon)</div>} />
+            
+            {/* Drone Routes */}
+            <Route path="/fleet" element={<DronesList />} />
+            <Route path="/fleet/new" element={<DroneManagementForm />} />
+            <Route path="/fleet/:id" element={<div className="p-8">View Drone (Coming Soon)</div>} />
+            <Route path="/fleet/:id/edit" element={<DroneManagementForm />} />
             
             {/* These routes are placeholders for future implementation */}
-            <Route path="/fleet" element={<div className="p-8">Fleet Management (Coming Soon)</div>} />
             <Route path="/analytics" element={<div className="p-8">Analytics (Coming Soon)</div>} />
             <Route path="/schedule" element={<div className="p-8">Schedule (Coming Soon)</div>} />
             <Route path="/users" element={<div className="p-8">Users (Coming Soon)</div>} />

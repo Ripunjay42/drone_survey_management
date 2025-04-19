@@ -1,19 +1,23 @@
 // client/src/components/missions/MissionPlanningForm.jsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useMissionStore from '../../stores/missionStore';
+import useDroneStore from '../../stores/droneStore';
 import MapComponent from '../map/MapComponent';
 import FlightPatternPreview from './FlightPatternPreview';
 import { createMission } from '../../services/missionService';
+import { fetchAvailableDrones } from '../../services/droneService';
 
 const MissionPlanningForm = () => {
   const navigate = useNavigate();
   const { isLoading, error, clearError } = useMissionStore();
+  const { availableDrones } = useDroneStore();
   
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     surveyArea: null,
+    drone: '',
     flightParameters: {
       altitude: 50,
       speed: 5,
@@ -34,6 +38,24 @@ const MissionPlanningForm = () => {
   const [formErrors, setFormErrors] = useState({});
   const [showRecurrence, setShowRecurrence] = useState(false);
   
+  // Fetch available drones when schedule date changes
+  useEffect(() => {
+    if (formData.schedule.dateTime) {
+      const fetchDrones = async () => {
+        // Calculate an estimated end time (add 2 hours to start time)
+        const startDate = new Date(formData.schedule.dateTime);
+        const endDate = new Date(startDate.getTime() + (2 * 60 * 60 * 1000)); // Add 2 hours
+        
+        await fetchAvailableDrones(
+          formData.schedule.dateTime,
+          endDate.toISOString()
+        );
+      };
+      
+      fetchDrones();
+    }
+  }, [formData.schedule.dateTime]);
+  
   // Form validation
   const validateForm = () => {
     const errors = {};
@@ -41,6 +63,7 @@ const MissionPlanningForm = () => {
     if (!formData.name.trim()) errors.name = 'Mission name is required';
     if (!formData.surveyArea) errors.surveyArea = 'You must draw a survey area on the map';
     if (!formData.schedule.dateTime) errors.dateTime = 'Mission date and time is required';
+    if (!formData.drone) errors.drone = 'You must select a drone for the mission';
     
     // Validate flight parameters
     if (formData.flightParameters.altitude < 10 || formData.flightParameters.altitude > 500) {
@@ -189,6 +212,22 @@ const MissionPlanningForm = () => {
     }
   };
   
+  // Handle drone selection
+  const handleDroneChange = (e) => {
+    setFormData({
+      ...formData,
+      drone: e.target.value
+    });
+    
+    // Clear related error if any
+    if (formErrors.drone) {
+      setFormErrors({
+        ...formErrors,
+        drone: undefined
+      });
+    }
+  };
+  
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
       <div className="mb-6">
@@ -264,6 +303,50 @@ const MissionPlanningForm = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                   placeholder="Enter mission description"
                 ></textarea>
+              </div>
+            </div>
+          </div>
+          
+          {/* Drone Selection */}
+          <div className="bg-white border border-gray-200 rounded-lg p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Drone Selection</h2>
+            
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="drone" className="block text-sm font-medium text-gray-700 mb-1">
+                  Select Drone *
+                </label>
+                <select
+                  id="drone"
+                  name="drone"
+                  value={formData.drone}
+                  onChange={handleDroneChange}
+                  className={`w-full px-3 py-2 border ${
+                    formErrors.drone ? 'border-red-300' : 'border-gray-300'
+                  } rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500`}
+                >
+                  <option value="">-- Select a drone --</option>
+                  {availableDrones.map((drone) => (
+                    <option key={drone._id} value={drone._id}>
+                      {drone.name} - {drone.model} ({drone.batteryLevel}% battery)
+                    </option>
+                  ))}
+                </select>
+                {formErrors.drone && (
+                  <p className="mt-1 text-sm text-red-600">{formErrors.drone}</p>
+                )}
+                
+                {formData.schedule.dateTime && availableDrones.length === 0 && (
+                  <p className="mt-3 text-sm text-yellow-600 bg-yellow-50 border border-yellow-200 rounded-md p-2">
+                    No drones available for the selected time. Please select a different time or add more drones.
+                  </p>
+                )}
+                
+                {!formData.schedule.dateTime && (
+                  <p className="mt-3 text-sm text-blue-600 bg-blue-50 border border-blue-200 rounded-md p-2">
+                    Select a mission date and time to see available drones.
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -583,10 +666,19 @@ const MissionPlanningForm = () => {
               </div>
               
               {formData.schedule.dateTime && (
-                <div className="flex justify-between">
+                <div className="flex justify-between border-b border-gray-100 pb-2">
                   <span className="text-sm text-gray-500">Start Date/Time:</span>
                   <span className="text-sm font-medium">
                     {new Date(formData.schedule.dateTime).toLocaleString()}
+                  </span>
+                </div>
+              )}
+              
+              {formData.drone && (
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-500">Selected Drone:</span>
+                  <span className="text-sm font-medium">
+                    {availableDrones.find(d => d._id === formData.drone)?.name || 'Loading...'}
                   </span>
                 </div>
               )}

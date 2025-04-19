@@ -1,6 +1,7 @@
 // server/controllers/missionController.js
 const Mission = require('../models/missionModel');
 const User = require('../models/userModel');
+const Drone = require('../models/droneModel');
 
 // @desc    Create a new mission
 // @route   POST /api/missions
@@ -12,17 +13,48 @@ const createMission = async (req, res) => {
       description,
       surveyArea,
       flightParameters,
-      schedule
+      schedule,
+      drone
     } = req.body;
+
+    if (!drone) {
+      return res.status(400).json({ message: 'A drone must be assigned to the mission' });
+    }
+
+    // Verify drone exists and is available
+    const droneExists = await Drone.findById(drone);
+    if (!droneExists) {
+      return res.status(404).json({ message: 'Selected drone not found' });
+    }
+
+    if (droneExists.status !== 'available') {
+      return res.status(400).json({ message: 'Selected drone is not available' });
+    }
+
+    // Check if drone is already assigned to another mission at this time
+    const missionDateTime = new Date(schedule.dateTime);
+    const overlappingMissions = await Mission.find({
+      drone: drone,
+      'schedule.dateTime': { $eq: missionDateTime },
+      status: { $in: ['scheduled', 'in-progress'] }
+    });
+
+    if (overlappingMissions.length > 0) {
+      return res.status(400).json({ 
+        message: 'The selected drone is already assigned to another mission at this time' 
+      });
+    }
 
     // Add the current user to the mission
     const mission = await Mission.create({
       name,
       description,
       user: req.user.id,
+      drone,
       surveyArea,
       flightParameters,
-      schedule
+      schedule,
+      status: 'scheduled' // Set status to scheduled when created
     });
 
     res.status(201).json(mission);
@@ -43,7 +75,8 @@ const getMissions = async (req, res) => {
     
     const missions = await Mission.find(filter)
       .sort({ createdAt: -1 })
-      .populate('user', 'name email');
+      .populate('user', 'name email')
+      .populate('drone', 'name model serialNumber');
 
     res.status(200).json(missions);
   } catch (error) {
@@ -58,7 +91,8 @@ const getMissions = async (req, res) => {
 const getMissionById = async (req, res) => {
   try {
     const mission = await Mission.findById(req.params.id)
-      .populate('user', 'name email');
+      .populate('user', 'name email')
+      .populate('drone', 'name model serialNumber');
 
     if (!mission) {
       return res.status(404).json({ message: 'Mission not found' });
@@ -97,11 +131,41 @@ const updateMission = async (req, res) => {
       return res.status(400).json({ message: `Cannot update mission with status: ${mission.status}` });
     }
 
+    // If changing the drone, verify it's available
+    if (req.body.drone && req.body.drone !== mission.drone.toString()) {
+      const newDrone = await Drone.findById(req.body.drone);
+      if (!newDrone) {
+        return res.status(404).json({ message: 'Selected drone not found' });
+      }
+
+      if (newDrone.status !== 'available') {
+        return res.status(400).json({ message: 'Selected drone is not available' });
+      }
+
+      // Check if new drone is already assigned to another mission at this time
+      const missionDateTime = req.body.schedule?.dateTime 
+        ? new Date(req.body.schedule.dateTime) 
+        : mission.schedule.dateTime;
+        
+      const overlappingMissions = await Mission.find({
+        drone: req.body.drone,
+        _id: { $ne: req.params.id }, // Exclude current mission
+        'schedule.dateTime': { $eq: missionDateTime },
+        status: { $in: ['scheduled', 'in-progress'] }
+      });
+
+      if (overlappingMissions.length > 0) {
+        return res.status(400).json({ 
+          message: 'The selected drone is already assigned to another mission at this time' 
+        });
+      }
+    }
+
     const updatedMission = await Mission.findByIdAndUpdate(
       req.params.id,
       req.body,
       { new: true, runValidators: true }
-    );
+    ).populate('drone', 'name model serialNumber');
 
     res.status(200).json(updatedMission);
   } catch (error) {

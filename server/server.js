@@ -7,6 +7,7 @@ require('dotenv').config();
 // Route imports
 const authRoutes = require('./routes/authRoutes');
 const missionRoutes = require('./routes/missionRoutes');
+const droneRoutes = require('./routes/droneRoutes'); // Add drone routes
 
 // Initialize Express app
 const app = express();
@@ -22,6 +23,7 @@ app.use(express.urlencoded({ extended: true }));
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/missions', missionRoutes);
+app.use('/api/drones', droneRoutes); // Add drone routes
 
 // Basic route for testing server
 app.get('/', (req, res) => {

@@ -17,6 +17,11 @@ const missionSchema = new mongoose.Schema(
       ref: 'User',
       required: true
     },
+    drone: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Drone',
+      required: true
+    },
     status: {
       type: String,
       enum: ['draft', 'scheduled', 'in-progress', 'completed', 'cancelled'],

@@ -1,5 +1,5 @@
 // client/src/components/dashboard/Dashboard.jsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   MapPin, 
   Plane, 
@@ -10,18 +10,31 @@ import {
   Plus
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { fetchDrones } from '../../services/droneService';
+import useDroneStore from '../../stores/droneStore';
 
 const Dashboard = () => {
+  const { drones } = useDroneStore();
+  
+  // Fetch drones on component mount
+  useEffect(() => {
+    fetchDrones();
+  }, []);
+  
+  // Calculate drone stats
+  const droneStats = {
+    totalDrones: drones.length,
+    availableDrones: drones.filter(drone => drone.status === 'available').length,
+    maintenanceDrones: drones.filter(drone => drone.status === 'maintenance').length,
+    offlineDrones: drones.filter(drone => drone.status === 'offline').length
+  };
+  
   // This would come from a real API in a production app
   const dashboardStats = {
     totalMissions: 24,
     completedMissions: 19,
     inProgressMissions: 2,
     scheduledMissions: 3,
-    totalDrones: 8,
-    availableDrones: 5,
-    maintenanceDrones: 2,
-    offlineDrones: 1,
     upcomingMissions: [
       { id: 1, name: 'Factory Roof Inspection', date: '2023-10-15T09:00:00', location: 'Chicago HQ' },
       { id: 2, name: 'Weekly Perimeter Survey', date: '2023-10-16T10:30:00', location: 'Atlanta Campus' },
@@ -88,7 +101,7 @@ const Dashboard = () => {
                   </dt>
                   <dd>
                     <div className="text-lg font-medium text-gray-900">
-                      {dashboardStats.availableDrones} / {dashboardStats.totalDrones}
+                      {droneStats.availableDrones} / {droneStats.totalDrones}
                     </div>
                   </dd>
                 </dl>
@@ -199,16 +212,17 @@ const Dashboard = () => {
                   <Plane className="h-6 w-6 text-green-600" />
                 </div>
                 <div className="ml-4">
-                  <h3 className="text-lg font-medium text-gray-900">Check Fleet Status</h3>
-                  <p className="mt-1 text-sm text-gray-500">View and manage your drone fleet</p>
+                  <h3 className="text-lg font-medium text-gray-900">Manage Drones</h3>
+                  <p className="mt-1 text-sm text-gray-500">Add or update drones in your fleet</p>
                 </div>
               </div>
               <div className="mt-5">
                 <Link
-                  to="/fleet"
+                  to="/fleet/new"
                   className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
                 >
-                  View Fleet
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Drone
                 </Link>
               </div>
             </div>
