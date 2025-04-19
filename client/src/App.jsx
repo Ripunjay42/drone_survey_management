@@ -24,6 +24,9 @@ import DroneDetailView from './components/drones/DroneDetailView';
 // Mission Monitoring Component
 import MissionMonitoring from './components/monitoring/MissionMonitoring';
 
+// Survey Reports Component
+import SurveyReports from './components/reports/SurveyReports';
+
 function App() {
   return (
     <Router>
@@ -51,6 +54,9 @@ function App() {
             
             {/* Mission Monitoring Route */}
             <Route path="/monitoring" element={<MissionMonitoring />} />
+            
+            {/* Survey Reports Route */}
+            <Route path="/reports" element={<SurveyReports />} />
             
             {/* These routes are placeholders for future implementation */}
             <Route path="/analytics" element={<div className="p-8">Analytics (Coming Soon)</div>} />

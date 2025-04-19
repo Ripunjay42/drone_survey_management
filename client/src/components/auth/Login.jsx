@@ -175,7 +175,7 @@ const Login = () => {
                 </a>
               </div>
             </div>
-          </div>
+          </div> */}
 
           <div className="mt-6">
             <div className="relative">
@@ -195,7 +195,7 @@ const Login = () => {
                 Create an account
               </Link>
             </div>
-          </div> */}
+          </div>
         </div>
       </div>
     </div>

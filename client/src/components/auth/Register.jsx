@@ -192,8 +192,8 @@ const Register = () => {
                   onChange={onChange}
                 >
                   <option value="operator">Drone Operator</option>
-                  <option value="manager">Project Manager</option>
-                  <option value="admin">Administrator</option>
+                  {/* <option value="manager">Project Manager</option> */}
+                  {/* <option value="admin">Administrator</option> */}
                 </select>
               </div>
             </div>

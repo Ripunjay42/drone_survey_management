@@ -10,7 +10,8 @@ import {
   X,
   Users,
   Calendar,
-  LogOut
+  LogOut,
+  FileText
 } from 'lucide-react';
 
 const Sidebar = ({ isMobile, toggleSidebar }) => {
@@ -37,7 +38,8 @@ const Sidebar = ({ isMobile, toggleSidebar }) => {
     { name: 'Dashboard', icon: Home, path: '/dashboard' },
     { name: 'Mission Planning', icon: MapPin, path: '/missions' },
     { name: 'Fleet Management', icon: Plane, path: '/fleet' },
-    {name : 'Mission Monitoring', icon: BarChart2, path: '/monitoring'},
+    { name: 'Mission Monitoring', icon: BarChart2, path: '/monitoring' },
+    { name: 'Survey Reports', icon: FileText, path: '/reports' },
     // { name: 'Analytics', icon: BarChart2, path: '/analytics' },
     // { name: 'Schedule', icon: Calendar, path: '/schedule' },
     // { name: 'Users', icon: Users, path: '/users' },
@@ -53,7 +55,7 @@ const Sidebar = ({ isMobile, toggleSidebar }) => {
       <div className="flex items-center justify-between h-16 px-4 border-b border-gray-800">
         <div className="flex items-center">
           <Plane className="h-8 w-8 text-indigo-400" />
-          <span className="ml-2 text-xl font-semibold">DroneServey</span>
+          <span className="ml-2 text-xl font-semibold">DroneSurvey</span>
         </div>
         {isMobile && (
           <button onClick={toggleSidebar} className="p-1 rounded-md text-gray-400 hover:text-white">
