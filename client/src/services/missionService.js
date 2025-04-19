@@ -1,7 +1,10 @@
 // client/src/services/missionService.js
 import axios from 'axios';
+import useMissionStore from '../stores/missionStore';
 
-const API_URL = 'http://localhost:5000/api/missions';
+const API_URL = import.meta.env.VITE_API_URL 
+  ? `${import.meta.env.VITE_API_URL}/missions`
+  : 'http://localhost:5000/api/missions';
 
 // Create config object with authorization header
 const getConfig = (token) => {
@@ -12,57 +15,152 @@ const getConfig = (token) => {
   };
 };
 
-// Create a new mission
-export const createMission = async (missionData, token) => {
-  try {
-    const response = await axios.post(API_URL, missionData, getConfig(token));
-    return response.data;
-  } catch (error) {
-    const message = error.response?.data?.message || 'Failed to create mission';
-    throw new Error(message);
-  }
+// Helper to get token from localStorage
+const getToken = () => {
+  const user = JSON.parse(localStorage.getItem('user'));
+  return user?.token;
 };
 
-// Get all missions
-export const getMissions = async (token) => {
+// Fetch all missions
+export const fetchMissions = async () => {
+  const { setLoading, setError, setMissions } = useMissionStore.getState();
+  const token = getToken();
+  
+  if (!token) {
+    setError('Authentication required');
+    return null;
+  }
+  
   try {
+    setLoading(true);
+    setError(null);
+    
     const response = await axios.get(API_URL, getConfig(token));
-    return response.data;
+    const missions = response.data;
+    
+    setMissions(missions);
+    setLoading(false);
+    return missions;
   } catch (error) {
     const message = error.response?.data?.message || 'Failed to fetch missions';
-    throw new Error(message);
+    setError(message);
+    setLoading(false);
+    console.error('Error fetching missions:', error);
+    return null;
   }
 };
 
-// Get a specific mission by ID
-export const getMissionById = async (id, token) => {
+// Fetch a specific mission by ID
+export const fetchMissionById = async (id) => {
+  const { setLoading, setError, setCurrentMission } = useMissionStore.getState();
+  const token = getToken();
+  
+  if (!token) {
+    setError('Authentication required');
+    return null;
+  }
+  
   try {
+    setLoading(true);
+    setError(null);
+    
     const response = await axios.get(`${API_URL}/${id}`, getConfig(token));
-    return response.data;
+    const mission = response.data;
+    
+    setCurrentMission(mission);
+    setLoading(false);
+    return mission;
   } catch (error) {
     const message = error.response?.data?.message || 'Failed to fetch mission details';
-    throw new Error(message);
+    setError(message);
+    setLoading(false);
+    console.error('Error fetching mission by ID:', error);
+    return null;
+  }
+};
+
+// Create a new mission
+export const createMission = async (missionData) => {
+  const { setLoading, setError, addMissionToStore } = useMissionStore.getState();
+  const token = getToken();
+  
+  if (!token) {
+    setError('Authentication required');
+    return null;
+  }
+  
+  try {
+    setLoading(true);
+    setError(null);
+    
+    const response = await axios.post(API_URL, missionData, getConfig(token));
+    const newMission = response.data;
+    
+    addMissionToStore(newMission);
+    setLoading(false);
+    return newMission;
+  } catch (error) {
+    const message = error.response?.data?.message || 'Failed to create mission';
+    setError(message);
+    setLoading(false);
+    console.error('Error creating mission:', error);
+    return null;
   }
 };
 
 // Update an existing mission
-export const updateMission = async (id, missionData, token) => {
+export const updateMission = async (id, missionData) => {
+  const { setLoading, setError, updateMissionInStore } = useMissionStore.getState();
+  const token = getToken();
+  
+  if (!token) {
+    setError('Authentication required');
+    return null;
+  }
+  
   try {
+    setLoading(true);
+    setError(null);
+    
     const response = await axios.put(`${API_URL}/${id}`, missionData, getConfig(token));
-    return response.data;
+    const updatedMission = response.data;
+    
+    updateMissionInStore(id, updatedMission);
+    setLoading(false);
+    return updatedMission;
   } catch (error) {
     const message = error.response?.data?.message || 'Failed to update mission';
-    throw new Error(message);
+    setError(message);
+    setLoading(false);
+    console.error('Error updating mission:', error);
+    return null;
   }
 };
 
 // Delete a mission
-export const deleteMission = async (id, token) => {
+export const deleteMission = async (id) => {
+  const { setLoading, setError, removeMissionFromStore } = useMissionStore.getState();
+  const token = getToken();
+  
+  if (!token) {
+    setError('Authentication required');
+    return false;
+  }
+  
   try {
-    const response = await axios.delete(`${API_URL}/${id}`, getConfig(token));
-    return response.data;
+    setLoading(true);
+    setError(null);
+    
+    await axios.delete(`${API_URL}/${id}`, getConfig(token));
+    
+    removeMissionFromStore(id);
+    setLoading(false);
+    return true;
   } catch (error) {
     const message = error.response?.data?.message || 'Failed to delete mission';
-    throw new Error(message);
+    setError(message);
+    setLoading(false);
+    console.error('Error deleting mission:', error);
+    return false;
   }
 };

@@ -1,12 +1,13 @@
 // client/src/components/missions/MissionPlanningForm.jsx
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useMissionStore from '../../stores/missionStore';
 import MapComponent from '../map/MapComponent';
+import { createMission } from '../../services/missionService';
 
 const MissionPlanningForm = () => {
   const navigate = useNavigate();
-  const { addMission, isLoading, error, clearError } = useMissionStore();
+  const { isLoading, error, clearError } = useMissionStore();
   
   const [formData, setFormData] = useState({
     name: '',
@@ -66,7 +67,7 @@ const MissionPlanningForm = () => {
     
     if (validateForm()) {
       try {
-        await addMission(formData);
+        await createMission(formData);
         navigate('/missions');
       } catch (error) {
         console.error('Error creating mission:', error);
@@ -509,7 +510,9 @@ const MissionPlanningForm = () => {
         <div className="space-y-6">
           <div className="bg-white border border-gray-200 rounded-lg p-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Survey Area</h2>
-            
+            <div className=" bg-white p-2 rounded shadow-md text-sm">
+                Draw a polygon to define the survey area
+            </div> 
             <MapComponent onAreaDrawn={handleAreaDrawn} />
             
             {formErrors.surveyArea && (

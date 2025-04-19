@@ -2,14 +2,16 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import useMissionStore from '../../stores/missionStore';
+import { fetchMissions, deleteMission } from '../../services/missionService';
 
 const MissionsList = () => {
-  const { missions, fetchMissions, deleteMission, isLoading, error } = useMissionStore();
+  const { missions, isLoading, error } = useMissionStore();
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   
   useEffect(() => {
+    // Fetch missions on component mount
     fetchMissions();
-  }, [fetchMissions]);
+  }, []);
   
   const handleDelete = async (id) => {
     const success = await deleteMission(id);

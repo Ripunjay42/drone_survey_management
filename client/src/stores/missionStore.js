@@ -1,12 +1,5 @@
 // client/src/stores/missionStore.js
 import { create } from 'zustand';
-import {
-  createMission,
-  getMissions,
-  getMissionById,
-  updateMission,
-  deleteMission
-} from '../services/missionService';
 
 const useMissionStore = create((set, get) => ({
   missions: [],
@@ -23,99 +16,30 @@ const useMissionStore = create((set, get) => ({
   // Clear error
   clearError: () => set({ error: null }),
   
-  // Fetch all missions
-  fetchMissions: async () => {
-    const user = JSON.parse(localStorage.getItem('user'));
-    if (!user) return;
-    
-    try {
-      set({ isLoading: true, error: null });
-      const missions = await getMissions(user.token);
-      set({ missions, isLoading: false });
-      return missions;
-    } catch (error) {
-      set({ error: error.message, isLoading: false });
-      console.error('Error fetching missions:', error);
-    }
-  },
+  // Store the fetched missions
+  setMissions: (missions) => set({ missions }),
   
-  // Fetch a single mission by ID
-  fetchMissionById: async (id) => {
-    const user = JSON.parse(localStorage.getItem('user'));
-    if (!user) return;
-    
-    try {
-      set({ isLoading: true, error: null });
-      const mission = await getMissionById(id, user.token);
-      set({ currentMission: mission, isLoading: false });
-      return mission;
-    } catch (error) {
-      set({ error: error.message, isLoading: false });
-      console.error('Error fetching mission details:', error);
-    }
-  },
+  // Store the current mission
+  setCurrentMission: (mission) => set({ currentMission: mission }),
   
-  // Create a new mission
-  addMission: async (missionData) => {
-    const user = JSON.parse(localStorage.getItem('user'));
-    if (!user) return;
-    
-    try {
-      set({ isLoading: true, error: null });
-      const newMission = await createMission(missionData, user.token);
-      set((state) => ({ 
-        missions: [newMission, ...state.missions],
-        currentMission: newMission,
-        isLoading: false 
-      }));
-      return newMission;
-    } catch (error) {
-      set({ error: error.message, isLoading: false });
-      console.error('Error creating mission:', error);
-    }
-  },
+  // Add a new mission to the store
+  addMissionToStore: (newMission) => set((state) => ({ 
+    missions: [newMission, ...state.missions],
+    currentMission: newMission
+  })),
   
-  // Update an existing mission
-  updateMission: async (id, missionData) => {
-    const user = JSON.parse(localStorage.getItem('user'));
-    if (!user) return;
-    
-    try {
-      set({ isLoading: true, error: null });
-      const updatedMission = await updateMission(id, missionData, user.token);
-      set((state) => ({ 
-        missions: state.missions.map(mission => 
-          mission._id === id ? updatedMission : mission
-        ),
-        currentMission: updatedMission,
-        isLoading: false 
-      }));
-      return updatedMission;
-    } catch (error) {
-      set({ error: error.message, isLoading: false });
-      console.error('Error updating mission:', error);
-    }
-  },
+  // Update a mission in the store
+  updateMissionInStore: (id, updatedMission) => set((state) => ({ 
+    missions: state.missions.map(mission => 
+      mission._id === id ? updatedMission : mission
+    ),
+    currentMission: updatedMission
+  })),
   
-  // Delete a mission
-  deleteMission: async (id) => {
-    const user = JSON.parse(localStorage.getItem('user'));
-    if (!user) return;
-    
-    try {
-      set({ isLoading: true, error: null });
-      await deleteMission(id, user.token);
-      set((state) => ({ 
-        missions: state.missions.filter(mission => mission._id !== id),
-        isLoading: false 
-      }));
-      return true;
-    } catch (error) {
-      set({ error: error.message, isLoading: false });
-      console.error('Error deleting mission:', error);
-      return false;
-    }
-  },
+  // Remove a mission from the store
+  removeMissionFromStore: (id) => set((state) => ({ 
+    missions: state.missions.filter(mission => mission._id !== id)
+  })),
   
   // Reset current mission
   resetCurrentMission: () => set({ currentMission: null }),

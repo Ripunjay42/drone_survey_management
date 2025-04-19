@@ -46,6 +46,7 @@ const Register = () => {
       setLoading(true);
       const userData = { name, email, password, role };
       const registeredUser = await register(userData);
+      localStorage.setItem('user', JSON.stringify(registeredUser));
       setUser(registeredUser);
       navigate('/dashboard');
     } catch (error) {
