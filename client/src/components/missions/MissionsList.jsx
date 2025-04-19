@@ -135,18 +135,18 @@ const MissionsList = () => {
                     <div className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
                       <div className="flex space-x-2">
                         <Link
-                          to={`/missions/${mission._id}`}
+                          to={`/monitoring`}
                           className="text-indigo-600 hover:text-indigo-900"
                         >
                           View
                         </Link>
-                        <span className="text-gray-300">|</span>
+                        {/* <span className="text-gray-300">|</span>
                         <Link
                           to={`/missions/${mission._id}/edit`}
                           className="text-indigo-600 hover:text-indigo-900"
                         >
                           Edit
-                        </Link>
+                        </Link> */}
                         <span className="text-gray-300">|</span>
                         {deleteConfirm === mission._id ? (
                           <div className="flex items-center space-x-2">

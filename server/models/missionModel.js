@@ -24,7 +24,7 @@ const missionSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['draft', 'scheduled', 'in-progress', 'completed', 'cancelled'],
+      enum: ['draft', 'scheduled', 'in-progress', 'completed', 'cancelled', 'aborted'],
       default: 'draft'
     },
     surveyArea: {

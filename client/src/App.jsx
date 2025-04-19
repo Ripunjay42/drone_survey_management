@@ -21,6 +21,9 @@ import DronesList from './components/drones/DronesList';
 import DroneManagementForm from './components/drones/DroneManagementForm';
 import DroneDetailView from './components/drones/DroneDetailView';
 
+// Mission Monitoring Component
+import MissionMonitoring from './components/monitoring/MissionMonitoring';
+
 function App() {
   return (
     <Router>
@@ -45,6 +48,9 @@ function App() {
             <Route path="/fleet/new" element={<DroneManagementForm />} />
             <Route path="/fleet/:id" element={<DroneDetailView />} />
             <Route path="/fleet/:id/edit" element={<DroneManagementForm />} />
+            
+            {/* Mission Monitoring Route */}
+            <Route path="/monitoring" element={<MissionMonitoring />} />
             
             {/* These routes are placeholders for future implementation */}
             <Route path="/analytics" element={<div className="p-8">Analytics (Coming Soon)</div>} />

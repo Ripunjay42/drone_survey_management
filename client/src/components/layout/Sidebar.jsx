@@ -37,10 +37,11 @@ const Sidebar = ({ isMobile, toggleSidebar }) => {
     { name: 'Dashboard', icon: Home, path: '/dashboard' },
     { name: 'Mission Planning', icon: MapPin, path: '/missions' },
     { name: 'Fleet Management', icon: Plane, path: '/fleet' },
-    { name: 'Analytics', icon: BarChart2, path: '/analytics' },
-    { name: 'Schedule', icon: Calendar, path: '/schedule' },
-    { name: 'Users', icon: Users, path: '/users' },
-    { name: 'Settings', icon: Settings, path: '/settings' }
+    {name : 'Mission Monitoring', icon: BarChart2, path: '/monitoring'},
+    // { name: 'Analytics', icon: BarChart2, path: '/analytics' },
+    // { name: 'Schedule', icon: Calendar, path: '/schedule' },
+    // { name: 'Users', icon: Users, path: '/users' },
+    // { name: 'Settings', icon: Settings, path: '/settings' }
   ];
 
   const isActive = (path) => {

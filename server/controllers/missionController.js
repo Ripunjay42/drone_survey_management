@@ -126,9 +126,17 @@ const updateMission = async (req, res) => {
       return res.status(403).json({ message: 'Not authorized to update this mission' });
     }
 
-    // Cannot update missions that are already in progress or completed
-    if (['in-progress', 'completed'].includes(mission.status)) {
+    // Cannot update missions that are already completed, but allow status changes
+    if (mission.status === 'completed' && !req.body.status) {
       return res.status(400).json({ message: `Cannot update mission with status: ${mission.status}` });
+    }
+    
+    // Allow status changes from in-progress to completed or aborted
+    if (mission.status === 'in-progress' && !['completed', 'aborted'].includes(req.body.status)) {
+      // Only allow status updates for in-progress missions, not other field updates
+      if (Object.keys(req.body).length > 1 || !req.body.status) {
+        return res.status(400).json({ message: 'Cannot update mission details while in progress. Only status changes are allowed.' });
+      }
     }
 
     // If changing the drone, verify it's available
