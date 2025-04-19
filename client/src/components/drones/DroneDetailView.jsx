@@ -12,11 +12,19 @@ const DroneDetailView = () => {
   const { currentDrone, isLoading, error } = useDroneStore();
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [mapVisible, setMapVisible] = useState(true);
+  const [mapKey, setMapKey] = useState(Date.now()); // Add a key to force re-render
 
   useEffect(() => {
     // Fetch drone details
     fetchDroneById(id);
   }, [id]);
+
+  // Add effect to refresh map when data changes
+  useEffect(() => {
+    if (currentDrone && mapVisible) {
+      setMapKey(Date.now());
+    }
+  }, [currentDrone, mapVisible]);
 
   const handleDelete = async () => {
     const success = await deleteDrone(id);
@@ -253,10 +261,13 @@ const DroneDetailView = () => {
             </div>
             
             {mapVisible && (
-              <div className="border border-gray-200 rounded-md overflow-hidden">
+              <div className="border border-gray-200 rounded-md overflow-hidden" style={{ height: "400px" }}>
                 <MapComponent 
+                  key={mapKey}
                   initialLocation={
                     currentDrone.location && 
+                    typeof currentDrone.location.latitude === 'number' && 
+                    typeof currentDrone.location.longitude === 'number' && 
                     currentDrone.location.latitude !== 0 && 
                     currentDrone.location.longitude !== 0 ? 
                     {
@@ -264,6 +275,16 @@ const DroneDetailView = () => {
                       lng: currentDrone.location.longitude
                     } : null
                   } 
+                  height="400px"
+                  zoom={14}
+                  markers={[{
+                    position: {
+                      lat: currentDrone.location?.latitude,
+                      lng: currentDrone.location?.longitude
+                    },
+                    title: currentDrone.name,
+                    info: `${currentDrone.name} (${currentDrone.model})`
+                  }]}
                 />
               </div>
             )}
