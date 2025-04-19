@@ -171,6 +171,65 @@ export const updateDrone = async (id, droneData) => {
   }
 };
 
+// Update drone location
+export const updateDroneLocation = async (id, locationData) => {
+  const { setError, updateDroneLocation } = useDroneStore.getState();
+  const token = getToken();
+  
+  if (!token) {
+    setError('Authentication required');
+    return false;
+  }
+  
+  try {
+    const updatedLocation = {
+      ...locationData,
+      lastUpdated: new Date()
+    };
+    
+    await axios.put(
+      `${API_URL}/${id}`, 
+      { location: updatedLocation }, 
+      getConfig(token)
+    );
+    
+    updateDroneLocation(id, updatedLocation);
+    return true;
+  } catch (error) {
+    const message = error.response?.data?.message || 'Failed to update drone location';
+    setError(message);
+    console.error('Error updating drone location:', error);
+    return false;
+  }
+};
+
+// Update drone health status
+export const updateDroneHealthStatus = async (id, healthStatus) => {
+  const { setError, updateDroneHealthStatus } = useDroneStore.getState();
+  const token = getToken();
+  
+  if (!token) {
+    setError('Authentication required');
+    return false;
+  }
+  
+  try {
+    await axios.put(
+      `${API_URL}/${id}`, 
+      { healthStatus }, 
+      getConfig(token)
+    );
+    
+    updateDroneHealthStatus(id, healthStatus);
+    return true;
+  } catch (error) {
+    const message = error.response?.data?.message || 'Failed to update drone health status';
+    setError(message);
+    console.error('Error updating drone health status:', error);
+    return false;
+  }
+};
+
 // Delete a drone
 export const deleteDrone = async (id) => {
   const { setLoading, setError, removeDroneFromStore } = useDroneStore.getState();

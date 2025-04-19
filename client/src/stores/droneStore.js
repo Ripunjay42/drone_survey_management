@@ -32,6 +32,48 @@ const useDroneStore = create((set) => ({
       : state.currentDrone
   })),
   
+  // Update drone location
+  updateDroneLocation: (id, location) => set((state) => ({
+    drones: state.drones.map((drone) => 
+      drone._id === id 
+        ? { ...drone, location: { ...location, lastUpdated: new Date() } } 
+        : drone
+    ),
+    currentDrone: state.currentDrone?._id === id 
+      ? { ...state.currentDrone, location: { ...location, lastUpdated: new Date() } }
+      : state.currentDrone
+  })),
+  
+  // Update drone battery level
+  updateDroneBatteryLevel: (id, batteryLevel) => set((state) => ({
+    drones: state.drones.map((drone) => 
+      drone._id === id ? { ...drone, batteryLevel } : drone
+    ),
+    currentDrone: state.currentDrone?._id === id 
+      ? { ...state.currentDrone, batteryLevel } 
+      : state.currentDrone
+  })),
+  
+  // Update drone status
+  updateDroneStatus: (id, status) => set((state) => ({
+    drones: state.drones.map((drone) => 
+      drone._id === id ? { ...drone, status } : drone
+    ),
+    currentDrone: state.currentDrone?._id === id 
+      ? { ...state.currentDrone, status } 
+      : state.currentDrone
+  })),
+  
+  // Update drone health status
+  updateDroneHealthStatus: (id, healthStatus) => set((state) => ({
+    drones: state.drones.map((drone) => 
+      drone._id === id ? { ...drone, healthStatus } : drone
+    ),
+    currentDrone: state.currentDrone?._id === id 
+      ? { ...state.currentDrone, healthStatus } 
+      : state.currentDrone
+  })),
+  
   // Remove a drone from the store
   removeDroneFromStore: (id) => set((state) => ({
     drones: state.drones.filter((drone) => drone._id !== id),

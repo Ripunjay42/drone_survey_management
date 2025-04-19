@@ -597,7 +597,9 @@ const MissionPlanningForm = () => {
             <div className=" bg-white p-2 rounded shadow-md text-sm">
                 Draw a polygon to define the survey area
             </div> 
-            <MapComponent onAreaDrawn={handleAreaDrawn} />
+            <div className="h-96">
+              <MapComponent onAreaDrawn={handleAreaDrawn} />
+            </div>
             
             {formErrors.surveyArea && (
               <p className="mt-3 text-sm text-red-600">{formErrors.surveyArea}</p>

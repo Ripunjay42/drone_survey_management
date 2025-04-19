@@ -40,6 +40,37 @@ const droneSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
       required: true
+    },
+    location: {
+      latitude: {
+        type: Number,
+        default: 0
+      },
+      longitude: {
+        type: Number,
+        default: 0
+      },
+      altitude: {
+        type: Number,
+        default: 0
+      },
+      locationName: {
+        type: String,
+        default: ''
+      },
+      lastUpdated: {
+        type: Date,
+        default: Date.now
+      }
+    },
+    healthStatus: {
+      type: String,
+      enum: ['excellent', 'good', 'fair', 'needs-attention', 'critical'],
+      default: 'excellent'
+    },
+    lastMaintenance: {
+      type: Date,
+      default: Date.now
     }
   },
   {

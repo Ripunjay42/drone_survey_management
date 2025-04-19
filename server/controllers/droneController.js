@@ -13,7 +13,8 @@ const createDrone = async (req, res) => {
       model,
       status,
       batteryLevel,
-      maxFlightTime
+      maxFlightTime,
+      location
     } = req.body;
 
     // Check if a drone with this serial number already exists
@@ -30,6 +31,7 @@ const createDrone = async (req, res) => {
       status: status || 'available',
       batteryLevel: batteryLevel || 100,
       maxFlightTime,
+      location: location || { latitude: 0, longitude: 0, altitude: 0 },
       user: req.user.id
     });
 
