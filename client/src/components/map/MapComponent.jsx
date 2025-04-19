@@ -9,7 +9,7 @@ import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN || 'pk.eyJ1Ijoic3BpZGVybmlzaGFudGEiLCJhIjoiY20ydW5ubGZuMDNlZTJpc2I1N2o3YWo0aiJ9.tKmf9gr1qgyi_N7WOaPoZw';
 mapboxgl.accessToken = MAPBOX_TOKEN;
 
-const MapComponent = ({ onAreaDrawn }) => {
+const MapComponent = ({ onAreaDrawn, initialLocation }) => {
   const mapContainer = useRef(null);
   const map = useRef(null);
   const draw = useRef(null);
@@ -17,6 +17,8 @@ const MapComponent = ({ onAreaDrawn }) => {
   const [lat, setLat] = useState(39);
   const [zoom, setZoom] = useState(3);
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [locationName, setLocationName] = useState('');
+  const [visibleLocationLabels, setVisibleLocationLabels] = useState([]);
 
   // Initialize map when component mounts
   useEffect(() => {
@@ -29,7 +31,7 @@ const MapComponent = ({ onAreaDrawn }) => {
         // Create map instance
         map.current = new mapboxgl.Map({
           container: mapContainer.current,
-          style: 'mapbox://styles/mapbox/satellite-v9',
+          style: 'mapbox://styles/mapbox/streets-v11', // Changed to streets style for better visibility of locations
           center: [lng, lat],
           zoom: zoom
         });
@@ -59,8 +61,84 @@ const MapComponent = ({ onAreaDrawn }) => {
           map.current.on('draw.update', updateArea);
           map.current.on('draw.delete', deleteArea);
           
+          // Add geocoder control to search for locations, but disable popup
+          if (!map.current.hasControl('geocoder')) {
+            const geolocateControl = new mapboxgl.GeolocateControl({
+              positionOptions: {
+                enableHighAccuracy: true
+              },
+              trackUserLocation: true,
+              showUserHeading: true
+            });
+            
+            // Override the _updateCamera method to prevent popup creation
+            if (geolocateControl._updateCamera) {
+              const originalUpdateCamera = geolocateControl._updateCamera;
+              geolocateControl._updateCamera = function(position) {
+                originalUpdateCamera.call(this, position);
+                // Find and remove any popups that might have been created
+                const popups = document.getElementsByClassName('mapboxgl-popup');
+                if (popups.length > 0) {
+                  for (let i = 0; i < popups.length; i++) {
+                    popups[i].remove();
+                  }
+                }
+              };
+            }
+            
+            map.current.addControl(geolocateControl, 'top-left');
+          }
+          
+          // Add location labels layer
+          map.current.addSource('location-labels', {
+            type: 'geojson',
+            data: {
+              type: 'FeatureCollection',
+              features: []
+            }
+          });
+
+          map.current.addLayer({
+            id: 'location-labels',
+            type: 'symbol',
+            source: 'location-labels',
+            layout: {
+              'text-field': ['get', 'name'],
+              'text-size': 12,
+              'text-anchor': 'top',
+              'text-offset': [0, 1],
+              'text-allow-overlap': false,
+              'text-ignore-placement': false,
+              'icon-image': 'marker-15',
+              'icon-size': 1.5,
+              'icon-allow-overlap': true
+            },
+            paint: {
+              'text-color': '#000000',
+              'text-halo-color': '#ffffff',
+              'text-halo-width': 2
+            }
+          });
+
+          // Update location labels when the map moves
+          map.current.on('moveend', updateLocationLabels);
+          
           // Try to get user location
           getUserLocation();
+        });
+
+        // Override the default click behavior to prevent popups
+        map.current.on('click', (e) => {
+          // We're intentionally not creating any popups here
+          console.log(`Clicked at: ${e.lngLat.lng}, ${e.lngLat.lat}`);
+          
+          // Remove any existing popups
+          const popups = document.getElementsByClassName('mapboxgl-popup');
+          if (popups.length > 0) {
+            for (let i = 0; i < popups.length; i++) {
+              popups[i].remove();
+            }
+          }
         });
 
         // Handle map errors
@@ -81,17 +159,96 @@ const MapComponent = ({ onAreaDrawn }) => {
         map.current.off('draw.create', updateArea);
         map.current.off('draw.update', updateArea);
         map.current.off('draw.delete', deleteArea);
+        map.current.off('moveend', updateLocationLabels);
         map.current.remove();
         map.current = null;
       }
     };
   }, []);
 
+  // Update location labels when the map view changes
+  const updateLocationLabels = async () => {
+    if (!map.current) return;
+
+    try {
+      const bounds = map.current.getBounds();
+      const center = map.current.getCenter();
+      const zoom = map.current.getZoom();
+
+      // Only fetch labels at certain zoom levels
+      if (zoom < 8) {
+        // At low zoom levels, only show major cities/regions
+        const response = await fetch(
+          `https://api.mapbox.com/geocoding/v5/mapbox.places/place.json?types=place,region&bbox=${bounds._sw.lng},${bounds._sw.lat},${bounds._ne.lng},${bounds._ne.lat}&access_token=${MAPBOX_TOKEN}`
+        );
+        const data = await response.json();
+        
+        if (data.features) {
+          const locationFeatures = data.features.map(feature => ({
+            type: 'Feature',
+            geometry: {
+              type: 'Point',
+              coordinates: feature.center
+            },
+            properties: {
+              name: feature.text,
+              fullName: feature.place_name,
+              placeType: feature.place_type[0]
+            }
+          }));
+
+          // Update source data
+          if (map.current.getSource('location-labels')) {
+            map.current.getSource('location-labels').setData({
+              type: 'FeatureCollection',
+              features: locationFeatures
+            });
+          }
+          
+          setVisibleLocationLabels(data.features);
+        }
+      } else {
+        // At higher zoom levels, show neighborhoods, addresses, etc.
+        const response = await fetch(
+          `https://api.mapbox.com/geocoding/v5/mapbox.places/poi.json?types=neighborhood,locality,address,poi&bbox=${bounds._sw.lng},${bounds._sw.lat},${bounds._ne.lng},${bounds._ne.lat}&limit=10&access_token=${MAPBOX_TOKEN}`
+        );
+        const data = await response.json();
+        
+        if (data.features) {
+          const locationFeatures = data.features.map(feature => ({
+            type: 'Feature',
+            geometry: {
+              type: 'Point',
+              coordinates: feature.center
+            },
+            properties: {
+              name: feature.text,
+              fullName: feature.place_name,
+              placeType: feature.place_type[0]
+            }
+          }));
+
+          // Update source data
+          if (map.current.getSource('location-labels')) {
+            map.current.getSource('location-labels').setData({
+              type: 'FeatureCollection',
+              features: locationFeatures
+            });
+          }
+          
+          setVisibleLocationLabels(data.features);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching location labels:', error);
+    }
+  };
+
   // Get user's location if available
   const getUserLocation = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        (position) => {
+        async (position) => {
           const { longitude, latitude } = position.coords;
           console.log('User location found:', longitude, latitude);
           
@@ -106,6 +263,52 @@ const MapComponent = ({ onAreaDrawn }) => {
               zoom: 12,
               essential: true
             });
+            
+            // Get location name using reverse geocoding and add to map
+            try {
+              const response = await fetch(
+                `https://api.mapbox.com/geocoding/v5/mapbox.places/${longitude},${latitude}.json?access_token=${MAPBOX_TOKEN}`
+              );
+              const data = await response.json();
+              
+              if (data.features && data.features.length > 0) {
+                const locationName = data.features[0].place_name;
+                setLocationName(locationName);
+                
+                // Add user location to the location labels layer with special styling
+                if (map.current.getSource('location-labels')) {
+                  const currentFeatures = map.current.getSource('location-labels')._data.features || [];
+                  
+                  const userLocationFeature = {
+                    type: 'Feature',
+                    geometry: {
+                      type: 'Point',
+                      coordinates: [longitude, latitude]
+                    },
+                    properties: {
+                      name: 'Your Location',
+                      fullName: locationName,
+                      placeType: 'user-location'
+                    }
+                  };
+                  
+                  map.current.getSource('location-labels').setData({
+                    type: 'FeatureCollection',
+                    features: [...currentFeatures, userLocationFeature]
+                  });
+                }
+                
+                // Add a marker at user's location WITHOUT popup
+                new mapboxgl.Marker({ color: '#3FB1CE' })
+                  .setLngLat([longitude, latitude])
+                  .addTo(map.current);
+              }
+            } catch (error) {
+              console.error('Error fetching location name:', error);
+            }
+            
+            // Update location labels around the user location
+            updateLocationLabels();
           }
         },
         (error) => {
@@ -133,6 +336,44 @@ const MapComponent = ({ onAreaDrawn }) => {
           polygon: polygonCoordinates,
           area: area
         });
+        
+        // Add markers at each vertex of the polygon WITHOUT popups
+        if (map.current && polygonCoordinates.coordinates && polygonCoordinates.coordinates[0]) {
+          // Remove existing markers
+          const existingMarkers = document.querySelectorAll('.vertex-marker');
+          existingMarkers.forEach(marker => marker.remove());
+          
+          // Add markers at each vertex
+          polygonCoordinates.coordinates[0].forEach((coord, index) => {
+            // Skip the last point in closed polygons (it's the same as the first)
+            if (index === polygonCoordinates.coordinates[0].length - 1 && 
+                coord[0] === polygonCoordinates.coordinates[0][0][0] && 
+                coord[1] === polygonCoordinates.coordinates[0][0][1]) {
+              return;
+            }
+            
+            // Create marker element
+            const el = document.createElement('div');
+            el.className = 'vertex-marker';
+            el.style.backgroundColor = '#fff';
+            el.style.width = '20px';
+            el.style.height = '20px';
+            el.style.borderRadius = '50%';
+            el.style.border = '2px solid #3FB1CE';
+            el.style.display = 'flex';
+            el.style.justifyContent = 'center';
+            el.style.alignItems = 'center';
+            el.style.color = '#000';
+            el.style.fontSize = '10px';
+            el.style.fontWeight = 'bold';
+            el.textContent = (index + 1).toString();
+            
+            // Add marker to map WITHOUT popup
+            new mapboxgl.Marker(el)
+              .setLngLat(coord)
+              .addTo(map.current);
+          });
+        }
       }
     } catch (error) {
       console.error('Error updating area:', error);
@@ -143,6 +384,10 @@ const MapComponent = ({ onAreaDrawn }) => {
   const deleteArea = () => {
     try {
       onAreaDrawn(null);
+      
+      // Remove vertex markers
+      const existingMarkers = document.querySelectorAll('.vertex-marker');
+      existingMarkers.forEach(marker => marker.remove());
     } catch (error) {
       console.error('Error deleting area:', error);
     }
@@ -152,14 +397,53 @@ const MapComponent = ({ onAreaDrawn }) => {
   const calculateArea = (polygon) => {
     // In a real application, you would use turf.js or similar to calculate the actual area
     // This is a placeholder
-    return "Calculated area would go here";
+    if (polygon && polygon.coordinates && polygon.coordinates[0]) {
+      // Rough estimate for visual purposes
+      const coords = polygon.coordinates[0];
+      let area = 0;
+      
+      // Simple polygon area calculation
+      for (let i = 0; i < coords.length - 1; i++) {
+        area += coords[i][0] * coords[i+1][1] - coords[i+1][0] * coords[i][1];
+      }
+      
+      area = Math.abs(area / 2);
+      return `Approx. ${area.toFixed(2)} square km`;
+    }
+    return "Area will be calculated when polygon is complete";
   };
+
+  // Function to remove all popups from the map
+  const removeAllPopups = () => {
+    const popups = document.getElementsByClassName('mapboxgl-popup');
+    if (popups.length > 0) {
+      for (let i = 0; i < popups.length; i++) {
+        popups[i].remove();
+      }
+    }
+  };
+
+  // Add an interval to periodically check and remove any popups
+  useEffect(() => {
+    const popupCheckInterval = setInterval(removeAllPopups, 500);
+    
+    return () => {
+      clearInterval(popupCheckInterval);
+    };
+  }, []);
 
   return (
     <div className="relative w-full">
       <div className="w-full h-[500px]" ref={mapContainer} />
       {/* <div className="absolute bottom-2 left-2 bg-white p-2 rounded shadow-md text-sm">
-        Draw a polygon to define the survey area
+        {locationName ? (
+          <div>
+            <p>Current location: {locationName}</p>
+            <p className="text-xs text-gray-500">Draw a polygon to define the survey area</p>
+          </div>
+        ) : (
+          <p>Draw a polygon to define the survey area</p>
+        )}
       </div> */}
       {!mapLoaded && (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-100 bg-opacity-50">

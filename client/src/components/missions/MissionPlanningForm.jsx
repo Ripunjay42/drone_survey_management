@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useMissionStore from '../../stores/missionStore';
 import MapComponent from '../map/MapComponent';
+import FlightPatternPreview from './FlightPatternPreview';
 import { createMission } from '../../services/missionService';
 
 const MissionPlanningForm = () => {
@@ -531,22 +532,22 @@ const MissionPlanningForm = () => {
             )}
           </div>
           
-          {/* Flight Pattern Preview - Would be a visual representation in a real app */}
+          {/* Flight Pattern Preview */}
           <div className="bg-white border border-gray-200 rounded-lg p-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Flight Preview</h2>
             
-            <div className="bg-gray-100 rounded-lg p-6 text-center h-60 flex items-center justify-center">
-              <div className="text-gray-500">
-                {formData.surveyArea ? (
-                  <div>
-                    <p className="mb-2">Flight pattern: {formData.flightParameters.flightPattern}</p>
-                    <p>A visual preview of the flight path would appear here.</p>
-                  </div>
-                ) : (
+            {formData.surveyArea ? (
+              <FlightPatternPreview 
+                flightPattern={formData.flightParameters.flightPattern}
+                surveyArea={formData.surveyArea}
+              />
+            ) : (
+              <div className="bg-gray-100 rounded-lg p-6 text-center h-60 flex items-center justify-center">
+                <div className="text-gray-500">
                   <p>Define a survey area to see flight preview</p>
-                )}
+                </div>
               </div>
-            </div>
+            )}
           </div>
           
           {/* Mission Summary */}
