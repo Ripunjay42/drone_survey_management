@@ -77,18 +77,33 @@ const getAvailableDrones = async (req, res) => {
     });
     
     if (startDateTime && endDateTime) {
-      // Find all missions that overlap with the provided timeframe
+      // Find all missions that could potentially overlap with the provided timeframe
       const overlappingMissions = await Mission.find({
         'schedule.dateTime': { 
-          $lte: new Date(endDateTime) 
+          $lt: new Date(endDateTime) // Mission starts before the end of requested window
         },
         status: { $in: ['scheduled', 'in-progress'] }
       });
       
       // Filter out drones that are already assigned to missions in this timeframe
-      const bookedDroneIds = overlappingMissions.map(mission => 
-        mission.drone ? mission.drone.toString() : null
-      ).filter(id => id !== null);
+      // A mission overlaps if: mission start time < requested end time AND mission end time > requested start time
+      const bookedDroneIds = [];
+      
+      overlappingMissions.forEach(mission => {
+        // Estimated mission duration (in milliseconds)
+        // You may need to adjust this calculation based on your actual mission duration logic
+        const missionDuration = 60 * 60 * 1000; // Example: 1 hour in milliseconds
+        const missionStart = new Date(mission.schedule.dateTime);
+        const missionEnd = new Date(missionStart.getTime() + missionDuration);
+        
+        // Check if mission overlaps with requested time window
+        // A mission overlaps if it ends after the requested start time
+        if (missionEnd > new Date(startDateTime)) {
+          if (mission.drone) {
+            bookedDroneIds.push(mission.drone.toString());
+          }
+        }
+      });
       
       const filteredDrones = availableDrones.filter(
         drone => !bookedDroneIds.includes(drone._id.toString())
