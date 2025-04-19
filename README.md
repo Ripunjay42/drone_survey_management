@@ -72,8 +72,8 @@ The application follows a modern client-server architecture:
 
 1. Clone the repository:
    ```bash
-   git clone <repository-url>
-   cd drone_servey
+   git clone https://github.com/Ripunjay42/drone_servey_management.git
+   cd drone_servey_management
    ```
 
 2. Install frontend dependencies:
