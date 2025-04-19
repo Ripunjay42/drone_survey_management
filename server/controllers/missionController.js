@@ -169,6 +169,19 @@ const updateMission = async (req, res) => {
       }
     }
 
+    // Check if status is being updated to in-progress
+    if (req.body.status === 'in-progress' && mission.status !== 'in-progress') {
+      // Update drone status to in-mission
+      await Drone.findByIdAndUpdate(mission.drone, { status: 'in-mission' });
+    }
+    
+    // Check if status is changing from in-progress to completed or aborted
+    if (mission.status === 'in-progress' && 
+        ['completed', 'aborted'].includes(req.body.status)) {
+      // Set drone back to available
+      await Drone.findByIdAndUpdate(mission.drone, { status: 'available' });
+    }
+
     const updatedMission = await Mission.findByIdAndUpdate(
       req.params.id,
       req.body,

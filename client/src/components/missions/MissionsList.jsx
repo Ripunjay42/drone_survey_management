@@ -25,6 +25,11 @@ const MissionsList = () => {
     return date.toLocaleString();
   };
   
+  // Check if mission can be edited (only scheduled missions can be edited)
+  const canEditMission = (status) => {
+    return status === 'scheduled';
+  };
+  
   if (isLoading && missions.length === 0) {
     return (
       <div className="max-w-6xl mx-auto px-4 py-8">
@@ -99,6 +104,7 @@ const MissionsList = () => {
                         mission.status === 'in-progress' ? 'bg-yellow-500' :
                         mission.status === 'completed' ? 'bg-green-500' :
                         mission.status === 'cancelled' ? 'bg-red-500' :
+                        mission.status === 'aborted' ? 'bg-red-500' :
                         'bg-gray-500'
                       }`}></div>
                       <p className="text-lg font-medium text-indigo-600 truncate">
@@ -110,6 +116,7 @@ const MissionsList = () => {
                         mission.status === 'scheduled' ? 'bg-blue-100 text-blue-800' :
                         mission.status === 'in-progress' ? 'bg-yellow-100 text-yellow-800' :
                         mission.status === 'completed' ? 'bg-green-100 text-green-800' :
+                        mission.status === 'aborted' ? 'bg-red-100 text-red-800' :
                         mission.status === 'cancelled' ? 'bg-red-100 text-red-800' :
                         'bg-gray-100 text-gray-800'
                       }`}>
@@ -140,13 +147,19 @@ const MissionsList = () => {
                         >
                           View
                         </Link>
-                        {/* <span className="text-gray-300">|</span>
-                        <Link
-                          to={`/missions/${mission._id}/edit`}
-                          className="text-indigo-600 hover:text-indigo-900"
-                        >
-                          Edit
-                        </Link> */}
+                        <span className="text-gray-300">|</span>
+                        {canEditMission(mission.status) ? (
+                          <Link
+                            to={`/missions/${mission._id}/edit`}
+                            className="text-indigo-600 hover:text-indigo-900"
+                          >
+                            Edit
+                          </Link>
+                        ) : (
+                          <span className="text-gray-400 cursor-not-allowed" title={`Cannot edit missions with status: ${mission.status}`}>
+                            Edit
+                          </span>
+                        )}
                         <span className="text-gray-300">|</span>
                         {deleteConfirm === mission._id ? (
                           <div className="flex items-center space-x-2">
@@ -167,6 +180,7 @@ const MissionsList = () => {
                           <button
                             onClick={() => setDeleteConfirm(mission._id)}
                             className="text-red-600 hover:text-red-900"
+                            disabled={mission.status === 'in-progress'}
                           >
                             Delete
                           </button>

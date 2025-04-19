@@ -9,10 +9,20 @@ import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN || 'pk.eyJ1Ijoic3BpZGVybmlzaGFudGEiLCJhIjoiY20ydW5ubGZuMDNlZTJpc2I1N2o3YWo0aiJ9.tKmf9gr1qgyi_N7WOaPoZw';
 mapboxgl.accessToken = MAPBOX_TOKEN;
 
-const MapComponent = forwardRef(({ onAreaDrawn, onLocationSelected, initialLocation }, ref) => {
+const MapComponent = forwardRef(({ 
+  onAreaDrawn, 
+  onLocationSelected, 
+  initialLocation,
+  dronePosition, // Current drone position for live tracking
+  flightPath, // Array of past drone positions to draw flight path
+  surveyArea // The mission survey area to highlight
+}, ref) => {
   const mapContainer = useRef(null);
   const map = useRef(null);
   const draw = useRef(null);
+  const droneMarker = useRef(null);
+  const pathSourceRef = useRef(null);
+  const surveyAreaSourceRef = useRef(null);
   const [lng, setLng] = useState(initialLocation?.lng || -98);
   const [lat, setLat] = useState(initialLocation?.lat || 39);
   const [zoom, setZoom] = useState(initialLocation ? 12 : 3);
@@ -68,22 +78,24 @@ const MapComponent = forwardRef(({ onAreaDrawn, onLocationSelected, initialLocat
         console.log('Map loaded successfully');
         setMapLoaded(true);
 
-        // Add drawing controls
-        draw.current = new MapboxDraw({
-          displayControlsDefault: false,
-          controls: {
-            polygon: true,
-            trash: true
-          },
-          defaultMode: 'draw_polygon'
-        });
+        // Add drawing controls only if onAreaDrawn is provided
+        if (onAreaDrawn) {
+          draw.current = new MapboxDraw({
+            displayControlsDefault: false,
+            controls: {
+              polygon: true,
+              trash: true
+            },
+            defaultMode: 'draw_polygon'
+          });
 
-        map.current.addControl(draw.current);
+          map.current.addControl(draw.current);
 
-        // Handle drawing events
-        map.current.on('draw.create', updateArea);
-        map.current.on('draw.update', updateArea);
-        map.current.on('draw.delete', deleteArea);
+          // Handle drawing events
+          map.current.on('draw.create', updateArea);
+          map.current.on('draw.update', updateArea);
+          map.current.on('draw.delete', deleteArea);
+        }
 
         // Add geocoder control to search for locations, but disable popup
         if (!map.current.hasControl('geocoder')) {
@@ -143,12 +155,79 @@ const MapComponent = forwardRef(({ onAreaDrawn, onLocationSelected, initialLocat
             'text-halo-width': 2
           }
         });
+        
+        // Add flight path source and layer for drone tracking
+        map.current.addSource('flight-path', {
+          type: 'geojson',
+          data: {
+            type: 'Feature',
+            properties: {},
+            geometry: {
+              type: 'LineString',
+              coordinates: []
+            }
+          }
+        });
+        
+        pathSourceRef.current = map.current.getSource('flight-path');
+        
+        map.current.addLayer({
+          id: 'flight-path-line',
+          type: 'line',
+          source: 'flight-path',
+          layout: {
+            'line-join': 'round',
+            'line-cap': 'round'
+          },
+          paint: {
+            'line-color': '#FF4500',
+            'line-width': 3,
+            'line-opacity': 0.8
+          }
+        });
+        
+        // Add survey area source and layer if provided
+        map.current.addSource('survey-area', {
+          type: 'geojson',
+          data: {
+            type: 'Feature',
+            properties: {},
+            geometry: {
+              type: 'Polygon',
+              coordinates: [[]]
+            }
+          }
+        });
+        
+        surveyAreaSourceRef.current = map.current.getSource('survey-area');
+        
+        map.current.addLayer({
+          id: 'survey-area-fill',
+          type: 'fill',
+          source: 'survey-area',
+          paint: {
+            'fill-color': '#4f46e5',
+            'fill-opacity': 0.1
+          }
+        });
+        
+        map.current.addLayer({
+          id: 'survey-area-outline',
+          type: 'line',
+          source: 'survey-area',
+          paint: {
+            'line-color': '#4f46e5',
+            'line-width': 2
+          }
+        });
 
         // Update location labels when the map moves
         map.current.on('moveend', updateLocationLabels);
 
-        // Try to get user location
-        getUserLocation();
+        // Try to get user location if no initial location
+        if (!initialLocation) {
+          getUserLocation();
+        }
       });
 
       // Override the default click behavior to handle location selection
@@ -226,9 +305,11 @@ const MapComponent = forwardRef(({ onAreaDrawn, onLocationSelected, initialLocat
     // Cleanup function to remove the map instance
     return () => {
       if (map.current) {
-        map.current.off('draw.create', updateArea);
-        map.current.off('draw.update', updateArea);
-        map.current.off('draw.delete', deleteArea);
+        if (onAreaDrawn) {
+          map.current.off('draw.create', updateArea);
+          map.current.off('draw.update', updateArea);
+          map.current.off('draw.delete', deleteArea);
+        }
         map.current.off('moveend', updateLocationLabels);
         map.current.remove();
         map.current = null;
@@ -281,6 +362,69 @@ const MapComponent = forwardRef(({ onAreaDrawn, onLocationSelected, initialLocat
 
     fetchLocationName();
   }, [initialLocation, mapLoaded]);
+  
+  // Update the map with drone position and flight path
+  useEffect(() => {
+    if (!map.current || !mapLoaded) return;
+    
+    // Update drone marker position
+    if (dronePosition) {
+      // If no drone marker exists, create one
+      if (!droneMarker.current) {
+        // Create custom drone element
+        const el = document.createElement('div');
+        el.className = 'drone-marker';
+        el.style.width = '30px';
+        el.style.height = '30px';
+        el.style.backgroundImage = 'url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'24\' height=\'24\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%23EF4444\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3e%3cpath d=\'M12 2L8 4H4V8L2 12L4 16V20H8L12 22L16 20H20V16L22 12L20 8V4H16L12 2Z\'/%3e%3cpath d=\'M12 7L9 12H15L12 17\'/%3e%3c/svg%3e")';
+        el.style.backgroundSize = 'cover';
+        
+        droneMarker.current = new mapboxgl.Marker(el)
+          .setLngLat([dronePosition.lng, dronePosition.lat])
+          .addTo(map.current);
+          
+        // Fly to drone position when first created
+        map.current.flyTo({
+          center: [dronePosition.lng, dronePosition.lat],
+          zoom: 14
+        });
+      } else {
+        // Update existing marker position
+        droneMarker.current.setLngLat([dronePosition.lng, dronePosition.lat]);
+      }
+    }
+    
+    // Update flight path
+    if (pathSourceRef.current && flightPath && flightPath.length > 0) {
+      const coordinates = flightPath.map(pos => [pos.lng, pos.lat]);
+      
+      pathSourceRef.current.setData({
+        type: 'Feature',
+        properties: {},
+        geometry: {
+          type: 'LineString',
+          coordinates: coordinates
+        }
+      });
+    }
+    
+  }, [dronePosition, flightPath, mapLoaded]);
+  
+  // Update survey area on the map
+  useEffect(() => {
+    if (!map.current || !mapLoaded || !surveyAreaSourceRef.current || !surveyArea) return;
+    
+    if (surveyArea && surveyArea.coordinates && surveyArea.coordinates[0]) {
+      surveyAreaSourceRef.current.setData({
+        type: 'Feature',
+        properties: {},
+        geometry: {
+          type: 'Polygon',
+          coordinates: surveyArea.coordinates
+        }
+      });
+    }
+  }, [surveyArea, mapLoaded]);
 
   // Update location labels when the map view changes
   const updateLocationLabels = async () => {

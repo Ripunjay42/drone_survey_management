@@ -41,7 +41,7 @@ function App() {
             <Route path="/missions" element={<MissionsList />} />
             <Route path="/missions/new" element={<MissionPlanningForm />} />
             <Route path="/missions/:id" element={<div className="p-8">View Mission (Coming Soon)</div>} />
-            <Route path="/missions/:id/edit" element={<div className="p-8">Edit Mission (Coming Soon)</div>} />
+            <Route path="/missions/:id/edit" element={<MissionPlanningForm />} />
             
             {/* Drone Routes */}
             <Route path="/fleet" element={<DronesList />} />
