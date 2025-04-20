@@ -245,7 +245,7 @@ Several AI tools were integrated into the development workflow to enhance produc
 ## Project Structure
 
 ```
-drone_servey/
+drone_servey_management/
 ├── client/                  # Frontend application
 │   ├── public/              # Static files
 │   ├── src/
