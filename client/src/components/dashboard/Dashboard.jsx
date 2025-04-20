@@ -239,7 +239,7 @@ const Dashboard = () => {
           </div>
           <div className="bg-gray-50 px-5 py-3">
             <div className="text-sm">
-              <Link to="/schedule" className="font-medium text-indigo-600 hover:text-indigo-500">
+              <Link to="/monitoring" className="font-medium text-indigo-600 hover:text-indigo-500">
                 View schedule
               </Link>
             </div>
@@ -269,7 +269,7 @@ const Dashboard = () => {
           </div>
           <div className="bg-gray-50 px-5 py-3">
             <div className="text-sm">
-              <Link to="/analytics" className="font-medium text-indigo-600 hover:text-indigo-500">
+              <Link to="/reports" className="font-medium text-indigo-600 hover:text-indigo-500">
                 View analytics
               </Link>
             </div>
