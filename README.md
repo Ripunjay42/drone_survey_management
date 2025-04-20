@@ -166,6 +166,10 @@ npm start
 - `POST /api/auth/register`: Register a new user
 - `POST /api/auth/login`: Authenticate user and get token
 
+#### Default Admin Credentials
+- **Email**: admin12@gmail.com
+- **Password**: admin@12
+
 #### Drones Endpoints
 - `GET /api/drones`: Get all drones
 - `POST /api/drones`: Create a new drone
@@ -284,4 +288,3 @@ drone_servey_management/
 - Integration with weather APIs for mission planning
 - Image processing for survey data analysis
 - Advanced reporting with data visualization
-````
