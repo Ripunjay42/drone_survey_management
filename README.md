@@ -284,5 +284,4 @@ drone_servey/
 - Integration with weather APIs for mission planning
 - Image processing for survey data analysis
 - Advanced reporting with data visualization
-- Mobile application for field operations
 ````
